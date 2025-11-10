@@ -28,9 +28,18 @@ export default {
 	): Promise<Response> {
 		const url = new URL(request.url);
 
+		// CORS: reply to preflight requests for any /api/* path
+		if (request.method === "OPTIONS" && url.pathname.startsWith("/api/")) {
+			// Allow arbitrary sites
+			return corsifyResponse(null, {
+				status: 204,
+			});
+		}
+
 		// Handle static assets (frontend)
 		if (url.pathname === "/" || !url.pathname.startsWith("/api/")) {
-			return env.ASSETS.fetch(request);
+			const assetResp = await env.ASSETS.fetch(request);
+			return corsify(assetResp);
 		}
 
 		// API Routes
@@ -48,6 +57,39 @@ export default {
 		return new Response("Not found", { status: 404 });
 	},
 } satisfies ExportedHandler<Env>;
+
+// CORS header set used for allowing arbitrary sites
+const CORS_HEADERS: Record<string, string> = {
+	"Access-Control-Allow-Origin": "*",
+	"Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+	"Access-Control-Allow-Headers": "Content-Type, Authorization",
+};
+
+/**
+ * Wrap a newly created Response with CORS headers.
+ */
+function corsifyResponse(
+	body: BodyInit | null,
+	init: ResponseInit = {},
+): Response {
+	const headers = new Headers(init.headers ?? {});
+	for (const [k, v] of Object.entries(CORS_HEADERS)) {
+		headers.set(k, v);
+	}
+	return new Response(body, { ...init, headers });
+}
+
+/**
+ * Clone an existing Response and add CORS headers.
+ */
+function corsify(response: Response): Response {
+	const headers = new Headers(response.headers ?? {});
+	for (const [k, v] of Object.entries(CORS_HEADERS)) {
+		headers.set(k, v);
+	}
+	// Preserve status and body (works with streams)
+	return new Response(response.body, { status: response.status, headers });
+}
 
 /**
  * Handles chat API requests
