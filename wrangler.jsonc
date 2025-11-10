@@ -17,5 +17,12 @@
 	"ai": {
 		"binding": "AI"
 	},
+
+	"kv_namespaces": [
+		{
+			"binding": "FEATURE_FLAGS",
+			"id": "7fd2294c3e954ea2aff53744016d6d92"
+		}
+	],
 	"upload_source_maps": true
 }

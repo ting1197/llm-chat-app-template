@@ -36,6 +36,25 @@ export default {
 			});
 		}
 
+		// If this is an API request, check feature-flag in KV (if bound).
+		// When chat_enabled is explicitly "false" (case-insensitive), the API
+		// will return 503. If FEATURE_FLAGS isn't bound or an error occurs,
+		// default to enabled (fail-open) so we don't accidentally block traffic.
+		if (url.pathname.startsWith("/api/")) {
+			try {
+				const flag = await env.FEATURE_FLAGS?.get("chat_enabled");
+				if (flag !== undefined && flag !== null && String(flag).toLowerCase() === "false") {
+					return corsifyResponse(JSON.stringify({ error: "Service disabled" }), {
+						status: 503,
+						headers: { "content-type": "application/json" },
+					});
+				}
+			} catch (e) {
+				console.error("Error reading feature flag:", e);
+				// fail-open: continue to handle the request
+			}
+		}
+
 		// Handle static assets (frontend)
 		if (url.pathname === "/" || !url.pathname.startsWith("/api/")) {
 			const assetResp = await env.ASSETS.fetch(request);

@@ -12,6 +12,12 @@ export interface Env {
 	 * Binding for static assets.
 	 */
 	ASSETS: { fetch: (request: Request) => Promise<Response> };
+
+	/**
+	 * Optional KV namespace for feature flags. Bind a KV namespace named
+	 * FEATURE_FLAGS in your wrangler / Cloudflare dashboard to use it.
+	 */
+	FEATURE_FLAGS?: KVNamespace;
 }
 
 /**
