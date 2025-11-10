@@ -46,15 +46,17 @@ export default {
 		if (url.pathname === "/api/chat") {
 			// Handle POST requests for chat
 			if (request.method === "POST") {
-				return handleChatRequest(request, env);
+				// Ensure the streaming response from the AI is returned with CORS headers
+				const resp = await handleChatRequest(request, env);
+				return corsify(resp);
 			}
 
 			// Method not allowed for other request types
-			return new Response("Method not allowed", { status: 405 });
+			return corsifyResponse("Method not allowed", { status: 405 });
 		}
 
 		// Handle 404 for unmatched routes
-		return new Response("Not found", { status: 404 });
+		return corsifyResponse("Not found", { status: 404 });
 	},
 } satisfies ExportedHandler<Env>;
 
@@ -126,16 +128,13 @@ async function handleChatRequest(
 			},
 		);
 
-		// Return streaming response
+		// Return streaming response (will be wrapped with CORS by caller)
 		return response;
 	} catch (error) {
 		console.error("Error processing chat request:", error);
-		return new Response(
-			JSON.stringify({ error: "Failed to process request" }),
-			{
-				status: 500,
-				headers: { "content-type": "application/json" },
-			},
-		);
+		return corsifyResponse(JSON.stringify({ error: "Failed to process request" }), {
+			status: 500,
+			headers: { "content-type": "application/json" },
+		});
 	}
 }
